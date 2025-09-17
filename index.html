@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="JaceLocker: Lock and unlock ERC20 tokens on X Layer blockchain. Connect with MetaMask to manage your token locks.">
+    <meta name="keywords" content="JaceLocker, token locker, X Layer, blockchain, Web3, cryptocurrency">
+    <meta name="robots" content="index, follow">
+    <title>JaceLocker - Token Locking on X Layer</title>
+    <link rel="icon" href="https://woofingjace.com/images/jace.png" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #121212;
+            color: #E6E6E6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: #1A1A1A;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            color: #00FFC8;
+            font-size: clamp(1.8em, 5vw, 2.5em);
+            margin-bottom: 25px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .logo {
+            width: 100px;
+            height: 50px;
+            object-fit: contain;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .button {
+            background: #333333;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        .button:hover {
+            background: #00FFC8;
+            color: #000000;
+            transform: translateY(-2px);
+        }
+        .button:disabled {
+            background: #444444;
+            color: #777777;
+            cursor: not-allowed;
+        }
+        .section {
+            background: #222222;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #cccccc;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #00FFC8;
+            font-size: clamp(1.2em, 3.5vw, 1.6em);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        label {
+            display: block;
+            font-size: 0.9rem;
+            color: #BBBBBB;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #cccccc;
+            border-radius: 6px;
+            background: #2A2A2A;
+            color: #E6E6E6;
+            font-size: 0.9rem;
+        }
+        input::placeholder, select::placeholder {
+            color: #666666;
+        }
+        input:focus, select:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 200, 0.4);
+        }
+        .status {
+            font-size: 0.85rem;
+            color: #FF5252;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .wallet-info {
+            color: #BBBBBB;
+            font-weight: 600;
+            word-break: break-all;
+        }
+        .output-box {
+            background: #2A2A2A;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            word-break: break-all;
+            font-size: 0.9rem;
+            color: #E6E6E6;
+        }
+        .output-box label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: #BBBBBB;
+        }
+        .lock-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .lock-table th, .lock-table td {
+            border: 1px solid #cccccc;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        .lock-table th {
+            background: #333333;
+            color: #00FFC8;
+        }
+        .how-it-works {
+            background: #222222;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #cccccc;
+            margin-top: 20px;
+        }
+        .how-it-works ul {
+            list-style-type: disc;
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+        .how-it-works li {
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+        .how-it-works .highlight {
+            color: #00FFC8;
+            font-weight: 600;
+        }
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #666666;
+        }
+        .footer a {
+            color: #00FFC8;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .header { flex-direction: column; align-items: center; }
+            .logo { width: 80px; height: 40px; }
+            .button { width: 100%; padding: 12px; margin: 8px 0; font-size: 0.8rem; }
+            .section, .how-it-works { padding: 15px; }
+            h2 { font-size: 1.1rem; }
+            input, select { font-size: 0.8rem; padding: 8px; }
+            .status, .output-box, .how-it-works li, .lock-table th, .lock-table td { font-size: 0.75rem; }
+            .how-it-works ul { padding-left: 15px; }
+            .footer { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JaceLocker - Token Locker</h1>
+        <div class="header">
+            <img src="https://woofingjace.com/images/jace.png" alt="JaceLocker" class="logo">
+            <div class="nav-buttons">
+                <button id="connectWallet" class="button">Connect Wallet</button>
+            </div>
+        </div>
+        <div class="content">
+            <div id="status" class="status"></div>
+            <div class="section">
+                <h2>Wallet Status</h2>
+                <div id="walletStatus" class="wallet-info">Not Connected</div>
+            </div>
+            <div class="section" id="lockTokenSection">
+                <h2>Lock Tokens</h2>
+                <input type="text" id="tokenAddress" placeholder="Token Address (e.g., 0x...)">
+                <input type="number" id="lockAmount" placeholder="Amount to Lock" min="0" step="any">
+                <input type="number" id="lockDays" placeholder="Lock Duration (Days)" min="1" step="1">
+                <button id="approveToken" class="button">Approve Token</button>
+                <button id="lockToken" class="button" disabled>Lock Token</button>
+                <div class="output-box">
+                    <label>Contract Address</label>
+                    <span id="contractAddress">0xD76076d5ebDfff1997b3BC0f6F846E21212C2fD3</span>
+                </div>
+                <button id="copyAddressButton" class="button">Copy Contract Address</button>
+                <div id="lockStatus" class="status"></div>
+            </div>
+            <div class="section" id="unlockTokenSection">
+                <h2>Unlock Tokens</h2>
+                <select id="lockedTokenAddress" onchange="loadLockInfo()">
+                    <option value="">Select Token to Unlock</option>
+                </select>
+                <select id="lockId" disabled>
+                    <option value="">Select Lock ID</option>
+                </select>
+                <button id="unlockToken" class="button" disabled>Unlock Token</button>
+                <div id="unlockStatus" class="status"></div>
+            </div>
+            <div class="section" id="lockInfoSection">
+                <h2>Your Locked Tokens</h2>
+                <div id="lockInfo" class="output-box">
+                    <label>Locked Tokens</label>
+                    <table class="lock-table">
+                        <thead>
+                            <tr>
+                                <th>Token Address</th>
+                                <th>Lock ID</th>
+                                <th>Amount</th>
+                                <th>Unlock Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lockTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="lockInfoStatus" class="status"></div>
+            </div>
+            <div class="how-it-works">
+                <h2>How It Works?</h2>
+                <p>Lock and manage your ERC20 tokens on X Layer with JaceLocker!</p>
+                <ul>
+                    <li><strong>Connect Your Wallet</strong>: Use MetaMask to connect to X Layer (chain ID: 196). Ensure enough <span class="highlight">OKB</span> for gas fees.</li>
+                    <li><strong>Approve Tokens</strong>: Enter a valid ERC20 token address and approve the contract to manage your tokens.</li>
+                    <li><strong>Lock Tokens</strong>: Specify the amount and lock duration (in days), then lock your tokens securely.</li>
+                    <li><strong>Unlock Tokens</strong>: Select a locked token and lock ID to unlock tokens after the lock period expires.</li>
+                    <li><strong>View Locks</strong>: Check your locked tokens, amounts, and unlock times in the table below.</li>
+                </ul>
+            </div>
+            <div class="footer">
+                <p>Powered by <a href="https://www.okx.com/web3/explorer/xlayer" target="_blank">X Layer</a> | JaceLocker © 2025</p>
+                <p>Not financial advice. Always DYOR!</p>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+    <script>
+        let web3, accounts, lockerContract;
+        const contractInfo = {
+            address: '0xD76076d5ebDfff1997b3BC0f6F846E21212C2fD3',
+            currency: 'OKB'
+        };
+
+        const lockerContractABI = [
+            {
+                "inputs": [],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {"indexed": true, "internalType": "address", "name": "user", "type": "address"},
+                    {"indexed": true, "internalType": "address", "name": "token", "type": "address"},
+                    {"indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256"},
+                    {"indexed": false, "internalType": "uint256", "name": "unlockTime", "type": "uint256"},
+                    {"indexed": false, "internalType": "uint256", "name": "lockId", "type": "uint256"}
+                ],
+                "name": "TokenLocked",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {"indexed": true, "internalType": "address", "name": "user", "type": "address"},
+                    {"indexed": true, "internalType": "address", "name": "token", "type": "address"},
+                    {"indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256"},
+                    {"indexed": false, "internalType": "uint256", "name": "lockId", "type": "uint256"}
+                ],
+                "name": "TokenUnlocked",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "SECONDS_PER_DAY",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "token", "type": "address"},
+                    {"internalType": "uint256", "name": "amount", "type": "uint256"},
+                    {"internalType": "uint256", "name": "daysToLock", "type": "uint256"}
+                ],
+                "name": "lockToken",
+                "outputs": [{"internalType": "uint256", "name": "lockId", "type": "uint256"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "token", "type": "address"},
+                    {"internalType": "uint256", "name": "lockId", "type": "uint256"}
+                ],
+                "name": "unlockToken",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "user", "type": "address"},
+                    {"internalType": "address", "name": "token", "type": "address"},
+                    {"internalType": "uint256", "name": "page", "type": "uint256"},
+                    {"internalType": "uint256", "name": "pageSize", "type": "uint256"}
+                ],
+                "name": "getLockInfo",
+                "outputs": [
+                    {"components": [
+                        {"internalType": "uint256", "name": "amount", "type": "uint256"},
+                        {"internalType": "uint256", "name": "unlockTime", "type": "uint256"}
+                    ], "internalType": "struct JaceLocker.LockInfo[]", "name": "locks", "type": "tuple[]"},
+                    {"internalType": "uint256", "name": "totalLocks", "type": "uint256"}
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "user", "type": "address"},
+                    {"internalType": "uint256", "name": "page", "type": "uint256"},
+                    {"internalType": "uint256", "name": "pageSize", "type": "uint256"}
+                ],
+                "name": "getUserLockedTokens",
+                "outputs": [
+                    {"internalType": "address[]", "name": "tokens", "type": "address[]"},
+                    {"internalType": "uint256", "name": "totalTokens", "type": "uint256"}
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "", "type": "address"},
+                    {"internalType": "address", "name": "", "type": "address"}
+                ],
+                "name": "userLocks",
+                "outputs": [
+                    {"internalType": "uint256", "name": "amount", "type": "uint256"},
+                    {"internalType": "uint256", "name": "unlockTime", "type": "uint256"}
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "", "type": "address"},
+                    {"internalType": "uint256", "name": "", "type": "uint256"}
+                ],
+                "name": "userLockedTokens",
+                "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        const erc20ABI = [
+            {
+                "constant": true,
+                "inputs": [{"name": "_owner", "type": "address"}],
+                "name": "balanceOf",
+                "outputs": [{"name": "balance", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [
+                    {"name": "_owner", "type": "address"},
+                    {"name": "_spender", "type": "address"}
+                ],
+                "name": "allowance",
+                "outputs": [{"name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    {"name": "_spender", "type": "address"},
+                    {"name": "_value", "type": "uint256"}
+                ],
+                "name": "approve",
+                "outputs": [{"name": "", "type": "bool"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    {"name": "_to", "type": "address"},
+                    {"name": "_value", "type": "uint256"}
+                ],
+                "name": "transfer",
+                "outputs": [{"name": "", "type": "bool"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    {"name": "_from", "type": "address"},
+                    {"name": "_to", "type": "address"},
+                    {"name": "_value", "type": "uint256"}
+                ],
+                "name": "transferFrom",
+                "outputs": [{"name": "", "type": "bool"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        const xLayer = { chainId: 196, name: 'X Layer mainnet', explorerUrl: 'https://www.okx.com/web3/explorer/xlayer', rpcUrl: 'https://rpc.xlayer.tech' };
+
+        async function connectWallet() {
+            const status = document.getElementById('walletStatus');
+            try {
+                if (!window.ethereum) {
+                    status.innerHTML = 'No wallet detected. Please install <a href="https://metamask.io" target="_blank">MetaMask</a>.';
+                    throw new Error("No wallet detected");
+                }
+                status.innerText = "Connecting...";
+                web3 = new Web3(window.ethereum);
+                accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (!accounts.length) throw new Error("Please unlock your wallet or connect it.");
+                const chainId = await web3.eth.getChainId();
+                if (chainId !== 196) {
+                    try {
+                        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xc4' }] });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0xc4',
+                                    chainName: 'X Layer mainnet',
+                                    nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
+                                    rpcUrls: ['https://rpc.xlayer.tech'],
+                                    blockExplorerUrls: ['https://www.okx.com/web3/explorer/xlayer']
+                                }]
+                            });
+                        } else throw switchError;
+                    }
+                }
+                document.getElementById('walletStatus').innerText = `Connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+                lockerContract = new web3.eth.Contract(lockerContractABI, contractInfo.address);
+                document.getElementById('status').innerText = "Connected to X Layer";
+                await loadLockedTokens();
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Failed to connect: " + error.message;
+            }
+        }
+
+        async function checkAllowance() {
+            const tokenAddress = document.getElementById('tokenAddress').value.trim();
+            const amount = document.getElementById('lockAmount').value.trim();
+            const lockButton = document.getElementById('lockToken');
+            const approveButton = document.getElementById('approveToken');
+            const status = document.getElementById('lockStatus');
+
+            if (!web3.utils.isAddress(tokenAddress) || !amount || amount <= 0) {
+                lockButton.disabled = true;
+                approveButton.disabled = true;
+                return;
+            }
+
+            try {
+                const tokenContract = new web3.eth.Contract(erc20ABI, tokenAddress);
+                const allowance = await tokenContract.methods.allowance(accounts[0], contractInfo.address).call();
+                const amountWei = web3.utils.toWei(amount, 'ether'); // 假设代币是 18 位小数
+                lockButton.disabled = allowance < amountWei;
+                approveButton.disabled = allowance >= amountWei;
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Failed to check allowance: " + error.message;
+                lockButton.disabled = true;
+                approveButton.disabled = false;
+            }
+        }
+
+        async function approveToken() {
+            const section = document.getElementById('lockTokenSection');
+            const status = document.getElementById('lockStatus');
+            const tokenAddress = document.getElementById('tokenAddress').value.trim();
+            const amount = document.getElementById('lockAmount').value.trim();
+
+            if (!web3.utils.isAddress(tokenAddress)) {
+                status.innerText = "Invalid token address.";
+                return;
+            }
+            if (!amount || amount <= 0) {
+                status.innerText = "Invalid amount.";
+                return;
+            }
+            if (!accounts) {
+                status.innerText = "Please connect your wallet first!";
+                return;
+            }
+
+            try {
+                section.classList.add('loading');
+                status.innerText = "Approving token...";
+                const tokenContract = new web3.eth.Contract(erc20ABI, tokenAddress);
+                const amountWei = web3.utils.toWei(amount, 'ether'); // 假设代币是 18 位小数
+                const gas = await tokenContract.methods.approve(contractInfo.address, amountWei).estimateGas({ from: accounts[0] }).catch(() => 100000);
+                await tokenContract.methods.approve(contractInfo.address, amountWei).send({ from: accounts[0], gas: Math.floor(gas * 1.2) });
+                status.innerText = "Token approved successfully!";
+                await checkAllowance();
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Failed to approve: " + error.message;
+            } finally {
+                section.classList.remove('loading');
+            }
+        }
+
+        async function lockToken() {
+            const section = document.getElementById('lockTokenSection');
+            const status = document.getElementById('lockStatus');
+            const tokenAddress = document.getElementById('tokenAddress').value.trim();
+            const amount = document.getElementById('lockAmount').value.trim();
+            const days = document.getElementById('lockDays').value.trim();
+
+            if (!web3.utils.isAddress(tokenAddress)) {
+                status.innerText = "Invalid token address.";
+                return;
+            }
+            if (!amount || amount <= 0) {
+                status.innerText = "Invalid amount.";
+                return;
+            }
+            if (!days || days <= 0) {
+                status.innerText = "Invalid lock duration.";
+                return;
+            }
+            if (!accounts) {
+                status.innerText = "Please connect your wallet first!";
+                return;
+            }
+
+            try {
+                section.classList.add('loading');
+                status.innerText = "Locking token...";
+                const amountWei = web3.utils.toWei(amount, 'ether'); // 假设代币是 18 位小数
+                const gas = await lockerContract.methods.lockToken(tokenAddress, amountWei, days).estimateGas({ from: accounts[0] }).catch(() => 600000);
+                const tx = await lockerContract.methods.lockToken(tokenAddress, amountWei, days).send({ from: accounts[0], gas: Math.floor(gas * 1.2) });
+                status.innerHTML = `Tokens locked! Lock ID: ${tx.events.TokenLocked.returnValues.lockId} (<a href="${xLayer.explorerUrl}/tx/${tx.transactionHash}" target="_blank">View on Explorer</a>)`;
+                document.getElementById('tokenAddress').value = '';
+                document.getElementById('lockAmount').value = '';
+                document.getElementById('lockDays').value = '';
+                await loadLockedTokens();
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Failed to lock tokens: " + (error.message.includes('revert') ? error.message.split('revert')[1]?.trim() || 'Unknown reason' : error.message);
+            } finally {
+                section.classList.remove('loading');
+            }
+        }
+
+        async function unlockToken() {
+            const section = document.getElementById('unlockTokenSection');
+            const status = document.getElementById('unlockStatus');
+            const tokenAddress = document.getElementById('lockedTokenAddress').value;
+            const lockId = document.getElementById('lockId').value;
+
+            if (!tokenAddress || !lockId) {
+                status.innerText = "Please select a token and lock ID.";
+                return;
+            }
+            if (!accounts) {
+                status.innerText = "Please connect your wallet first!";
+                return;
+            }
+
+            try {
+                section.classList.add('loading');
+                status.innerText = "Unlocking token...";
+                const gas = await lockerContract.methods.unlockToken(tokenAddress, lockId).estimateGas({ from: accounts[0] }).catch(() => 200000);
+                const tx = await lockerContract.methods.unlockToken(tokenAddress, lockId).send({ from: accounts[0], gas: Math.floor(gas * 1.2) });
+                status.innerHTML = `Tokens unlocked! Amount: ${web3.utils.fromWei(tx.events.TokenUnlocked.returnValues.amount, 'ether')} (<a href="${xLayer.explorerUrl}/tx/${tx.transactionHash}" target="_blank">View on Explorer</a>)`;
+                await loadLockedTokens();
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Failed to unlock: " + (error.message.includes('revert') ? error.message.split('revert')[1]?.trim() || 'Lock not found or still locked' : error.message);
+            } finally {
+                section.classList.remove('loading');
+            }
+        }
+
+        async function loadLockedTokens() {
+            if (!accounts || !lockerContract) return;
+            const tokenSelect = document.getElementById('lockedTokenAddress');
+            const lockSelect = document.getElementById('lockId');
+            const lockTableBody = document.getElementById('lockTableBody');
+            const status = document.getElementById('lockInfoStatus');
+
+            try {
+                tokenSelect.innerHTML = '<option value="">Select Token to Unlock</option>';
+                lockSelect.innerHTML = '<option value="">Select Lock ID</option>';
+                lockTableBody.innerHTML = '';
+                const [tokens] = await lockerContract.methods.getUserLockedTokens(accounts[0], 0, 100).call();
+                if (tokens.length === 0) {
+                    lockTableBody.innerHTML = '<tr><td colspan="5">No locked tokens found.</td></tr>';
+                    return;
+                }
+
+                for (const token of tokens) {
+                    const option = document.createElement('option');
+                    option.value = token;
+                    option.textContent = token;
+                    tokenSelect.appendChild(option);
+
+                    const [locks] = await lockerContract.methods.getLockInfo(accounts[0], token, 0, 100).call();
+                    for (let i = 0; i < locks.length; i++) {
+                        const lock = locks[i];
+                        if (lock.amount > 0) {
+                            const unlockTime = new Date(lock.unlockTime * 1000).toLocaleString();
+                            const isUnlocked = lock.unlockTime <= Math.floor(Date.now() / 1000);
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${token}</td>
+                                <td>${i}</td>
+                                <td>${web3.utils.fromWei(lock.amount, 'ether')}</td>
+                                <td>${unlockTime}</td>
+                                <td>${isUnlocked ? 'Unlocked' : 'Locked'}</td>
+                            `;
+                            lockTableBody.appendChild(row);
+                        }
+                    }
+                }
+                status.innerText = "Locked tokens loaded.";
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Failed to load locked tokens: " + error.message;
+            }
+        }
+
+        async function loadLockInfo() {
+            const tokenAddress = document.getElementById('lockedTokenAddress').value;
+            const lockSelect = document.getElementById('lockId');
+            const unlockButton = document.getElementById('unlockToken');
+            const status = document.getElementById('unlockStatus');
+
+            lockSelect.innerHTML = '<option value="">Select Lock ID</option>';
+            lockSelect.disabled = !tokenAddress;
+            unlockButton.disabled = true;
+
+            if (!tokenAddress || !accounts) return;
+
+            try {
+                const [locks] = await lockerContract.methods.getLockInfo(accounts[0], tokenAddress, 0, 100).call();
+                for (let i = 0; i < locks.length; i++) {
+                    if (locks[i].amount > 0) {
+                        const option = document.createElement('option');
+                        option.value = i;
+                        option.textContent = `Lock ID ${i} - ${web3.utils.fromWei(locks[i].amount, 'ether')} tokens, Unlock at ${new Date(locks[i].unlockTime * 1000).toLocaleString()}`;
+                        lockSelect.appendChild(option);
+                    }
+                }
+                lockSelect.disabled = false;
+                status.innerText = "Lock IDs loaded.";
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Failed to load lock info: " + error.message;
+            }
+        }
+
+        function copyToClipboard() {
+            const status = document.getElementById('lockStatus');
+            const sourceElement = document.getElementById('contractAddress');
+            const textToCopy = sourceElement.textContent;
+
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                status.innerText = 'Contract address copied to clipboard';
+            } catch (error) {
+                console.error('Copy address failed:', error);
+                status.innerText = 'Failed to copy contract address. Select and copy manually.';
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('copyAddressButton').disabled = false;
+            document.getElementById('connectWallet').addEventListener('click', connectWallet);
+            document.getElementById('approveToken').addEventListener('click', approveToken);
+            document.getElementById('lockToken').addEventListener('click', lockToken);
+            document.getElementById('unlockToken').addEventListener('click', unlockToken);
+            document.getElementById('copyAddressButton').addEventListener('click', copyToClipboard);
+            document.getElementById('tokenAddress').addEventListener('input', checkAllowance);
+            document.getElementById('lockAmount').addEventListener('input', checkAllowance);
+            if (!window.location.protocol.startsWith('http')) document.getElementById('walletStatus').innerHTML = 'Please run this page via a local server (e.g., "npx serve") to connect MetaMask.';
+            else if (!window.ethereum) document.getElementById('walletStatus').innerHTML = 'No wallet detected. Please install <a href="https://metamask.io">MetaMask</a>.';
+        });
+    </script>
+</body>
+</html>
