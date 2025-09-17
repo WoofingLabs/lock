@@ -668,11 +668,17 @@
                 lockRadioGroup.innerHTML = '';
                 lockIdGroup.innerHTML = '';
                 unlockButton.disabled = true;
+                status.textContent = "Loading locked tokens...";
 
-                const [locks, totalLocks] = await lockerContract.methods.getLockInfo(accounts[0], tokenAddress, 0, 1000).call();
-                console.log('Locks loaded:', locks, 'Total:', totalLocks);
+                // 调用 getLockInfo
+                const result = await lockerContract.methods.getLockInfo(accounts[0], tokenAddress, 0, 1000).call();
+                console.log('Raw getLockInfo result:', result); // 调试原始返回数据
+                const locks = result[0]; // locks 数组
+                const totalLocks = result[1]; // 总锁仓数量
 
-                if (totalLocks === 0) {
+                console.log('Parsed locks:', locks, 'Total locks:', totalLocks);
+
+                if (!Array.isArray(locks) || totalLocks === 0) {
                     lockTableBody.innerHTML = '<tr><td colspan="5">No locks found for this token.</td></tr>';
                     status.textContent = "No locks found for the specified token.";
                     return;
@@ -680,7 +686,7 @@
 
                 for (let i = 0; i < totalLocks; i++) {
                     const lock = locks[i];
-                    if (lock && lock.amount > 0) {
+                    if (lock && lock.amount && lock.amount > 0) {
                         const unlockTime = new Date(lock.unlockTime * 1000).toLocaleString();
                         const isUnlocked = lock.unlockTime <= Math.floor(Date.now() / 1000);
                         const row = document.createElement('tr');
@@ -720,7 +726,7 @@
 
                 status.textContent = "Locked tokens loaded successfully.";
             } catch (error) {
-                console.error('Load locked tokens error:', error);
+                console.error('Load locked tokens error - Full stack:', error);
                 status.textContent = "Failed to load locked tokens: " + error.message;
                 lockTableBody.innerHTML = '<tr><td colspan="5">Error loading locked tokens. Check console for details.</td></tr>';
             }
