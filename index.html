@@ -670,12 +670,10 @@
                 unlockButton.disabled = true;
                 status.textContent = "Loading locked tokens...";
 
-                // 调用 getLockInfo
                 const result = await lockerContract.methods.getLockInfo(accounts[0], tokenAddress, 0, 1000).call();
-                console.log('Raw getLockInfo result:', result); // 调试原始返回数据
-                const locks = result[0]; // locks 数组
-                const totalLocks = result[1]; // 总锁仓数量
-
+                console.log('Raw getLockInfo result:', result);
+                const locks = result[0];
+                const totalLocks = result[1];
                 console.log('Parsed locks:', locks, 'Total locks:', totalLocks);
 
                 if (!Array.isArray(locks) || totalLocks === 0) {
@@ -684,6 +682,20 @@
                     return;
                 }
 
+                // 只生成一个 Token Address 选项
+                const tokenRadio = document.createElement('input');
+                tokenRadio.type = 'radio';
+                tokenRadio.name = 'tokenAddress';
+                tokenRadio.value = tokenAddress;
+                tokenRadio.id = `token-${tokenAddress}`;
+                tokenRadio.checked = true; // 默认选中
+                const tokenLabel = document.createElement('label');
+                tokenLabel.htmlFor = `token-${tokenAddress}`;
+                tokenLabel.textContent = tokenAddress.slice(0, 6) + '...' + tokenAddress.slice(-4);
+                lockRadioGroup.appendChild(tokenRadio);
+                lockRadioGroup.appendChild(tokenLabel);
+
+                // 为每个锁仓记录生成 Lock ID 选项
                 for (let i = 0; i < totalLocks; i++) {
                     const lock = locks[i];
                     if (lock && lock.amount && lock.amount > 0) {
@@ -698,17 +710,6 @@
                             <td>${isUnlocked ? 'Unlocked' : 'Locked'}</td>
                         `;
                         lockTableBody.appendChild(row);
-
-                        const tokenRadio = document.createElement('input');
-                        tokenRadio.type = 'radio';
-                        tokenRadio.name = 'tokenAddress';
-                        tokenRadio.value = tokenAddress;
-                        tokenRadio.id = `token-${tokenAddress}`;
-                        const tokenLabel = document.createElement('label');
-                        tokenLabel.htmlFor = `token-${tokenAddress}`;
-                        tokenLabel.textContent = tokenAddress.slice(0, 6) + '...' + tokenAddress.slice(-4);
-                        lockRadioGroup.appendChild(tokenRadio);
-                        lockRadioGroup.appendChild(tokenLabel);
 
                         const lockRadio = document.createElement('input');
                         lockRadio.type = 'radio';
