@@ -275,6 +275,7 @@
             </div>
             <div class="section" id="lockInfoSection">
                 <h2>Your Locked Tokens</h2>
+                <input type="text" id="viewTokenAddress" placeholder="Token Address to View (e.g., 0x...)">
                 <div id="lockInfo" class="output-box">
                     <label>Locked Tokens</label>
                     <table class="lock-table">
@@ -289,13 +290,9 @@
                         </thead>
                         <tbody id="lockTableBody"></tbody>
                     </table>
-                    <div class="pagination">
-                        <button id="prevPage" class="button" disabled>Previous</button>
-                        <span id="pageInfo">Page 1</span>
-                        <button id="nextPage" class="button" disabled>Next</button>
-                    </div>
                 </div>
                 <div id="lockInfoStatus" class="status"></div>
+                <button id="loadLocksButton" class="button">Load Locked Tokens</button>
             </div>
             <div class="how-it-works">
                 <h2>How It Works?</h2>
@@ -305,7 +302,7 @@
                     <li><strong>Check Balance</strong>: Enter a valid ERC20 token address to see your balance.</li>
                     <li><strong>Lock Tokens</strong>: Specify the amount and lock duration (in days), then click "Lock Token" to lock. Authorization is handled automatically if needed.</li>
                     <li><strong>Unlock Tokens</strong>: Select a locked token and lock ID to unlock tokens after the lock period expires.</li>
-                    <li><strong>View Locks</strong>: Check your locked tokens with pagination support in the table below.</li>
+                    <li><strong>View Locks</strong>: Enter a token address and click "Load Locked Tokens" to view your locks (page 0, size 1000).</li>
                 </ul>
             </div>
             <div class="footer">
@@ -317,7 +314,6 @@
     <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
     <script>
         let web3, accounts, lockerContract;
-        let currentTokenPage = 0, currentLockPage = 0, tokensPerPage = 5, locksPerPage = 5;
         const contractInfo = {
             address: '0xD76076d5ebDfff1997b3BC0f6F846E21212C2fD3',
             currency: 'OKB'
@@ -528,7 +524,6 @@
                 document.getElementById('walletStatus').innerText = `Connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
                 lockerContract = new web3.eth.Contract(lockerContractABI, contractInfo.address);
                 document.getElementById('status').innerText = "Connected to X Layer";
-                await loadLockedTokens();
             } catch (error) {
                 console.error(error);
                 status.innerText = "Failed to connect: " + error.message;
@@ -559,8 +554,6 @@
                     return;
                 }
 
-                const allowance = await tokenContract.methods.allowance(accounts[0], contractInfo.address).call();
-                const amountWei = web3.utils.toWei(amount, 'ether');
                 lockButton.disabled = false; // 始终启用按钮，由 lockToken 处理授权
             } catch (error) {
                 console.error(error);
@@ -600,11 +593,12 @@
                 const tokenContract = new web3.eth.Contract(erc20ABI, tokenAddress);
                 const amountWei = web3.utils.toWei(amount, 'ether');
                 const allowance = await tokenContract.methods.allowance(accounts[0], contractInfo.address).call();
+                const maxAllowance = BigInt(2) ** BigInt(256) - BigInt(1);
 
-                if (allowance < amountWei) {
+                if (BigInt(allowance) < BigInt(amountWei) && BigInt(allowance) < maxAllowance) {
                     status.textContent = "Approving token...";
-                    const gasApprove = await tokenContract.methods.approve(contractInfo.address, amountWei).estimateGas({ from: accounts[0] }).catch(() => 100000);
-                    await tokenContract.methods.approve(contractInfo.address, amountWei).send({ from: accounts[0], gas: Math.floor(gasApprove * 1.2) });
+                    const gasApprove = await tokenContract.methods.approve(contractInfo.address, maxAllowance).estimateGas({ from: accounts[0] }).catch(() => 100000);
+                    await tokenContract.methods.approve(contractInfo.address, maxAllowance).send({ from: accounts[0], gas: Math.floor(gasApprove * 1.2) });
                     status.textContent = "Token approved, locking now...";
                 } else {
                     status.textContent = "Locking token...";
@@ -617,7 +611,6 @@
                 document.getElementById('lockAmount').value = '';
                 document.getElementById('lockDays').value = '';
                 document.getElementById('tokenBalance').textContent = "Enter a valid token address to see balance";
-                await loadLockedTokens();
             } catch (error) {
                 console.error(error);
                 status.textContent = "Failed to lock tokens: " + (error.message.includes('revert') ? error.message.split('revert')[1]?.trim() || 'Unknown reason' : error.message);
@@ -658,107 +651,36 @@
 
         async function loadLockedTokens() {
             if (!accounts || !lockerContract) return;
-            const tokenRadioGroup = document.getElementById('lockedTokenAddress');
-            const lockRadioGroup = document.getElementById('lockId');
+            const tokenAddress = document.getElementById('viewTokenAddress').value.trim();
             const lockTableBody = document.getElementById('lockTableBody');
-            const status = document.getElementById('lockInfoStatus');
-            const prevPageBtn = document.getElementById('prevPage');
-            const nextPageBtn = document.getElementById('nextPage');
-            const pageInfo = document.getElementById('pageInfo');
-            const unlockButton = document.getElementById('unlockToken');
-
-            try {
-                tokenRadioGroup.innerHTML = '';
-                lockRadioGroup.innerHTML = '';
-                lockTableBody.innerHTML = '';
-                unlockButton.disabled = true;
-                currentTokenPage = 0;
-
-                const [tokens, totalTokens] = await lockerContract.methods.getUserLockedTokens(accounts[0], currentTokenPage, tokensPerPage).call();
-                console.log('Tokens loaded - Page:', currentTokenPage, 'Data:', tokens, 'Total:', totalTokens);
-                const totalTokenPages = Math.ceil(totalTokens / tokensPerPage);
-
-                if (totalTokens === 0) {
-                    lockTableBody.innerHTML = '<tr><td colspan="5">No locked tokens found.</td></tr>';
-                    tokenRadioGroup.innerHTML = '<p>No tokens available.</p>';
-                    status.textContent = "No locked tokens found.";
-                    updatePagination(0, 0);
-                    return;
-                }
-
-                for (const token of tokens) {
-                    const radio = document.createElement('input');
-                    radio.type = 'radio';
-                    radio.name = 'tokenAddress';
-                    radio.value = token;
-                    radio.id = `token-${token}`;
-                    radio.addEventListener('change', loadLockInfo);
-                    const label = document.createElement('label');
-                    label.htmlFor = `token-${token}`;
-                    label.textContent = token.slice(0, 6) + '...' + token.slice(-4);
-                    tokenRadioGroup.appendChild(radio);
-                    tokenRadioGroup.appendChild(label);
-                }
-
-                currentLockPage = 0;
-                const selectedToken = document.querySelector('input[name="tokenAddress"]:checked')?.value || tokens[0];
-                await loadLockInfoForToken(selectedToken, currentLockPage);
-                updatePagination(currentTokenPage, totalTokenPages);
-
-                prevPageBtn.addEventListener('click', () => {
-                    if (currentTokenPage > 0) {
-                        currentTokenPage--;
-                        loadLockedTokens();
-                    }
-                });
-                nextPageBtn.addEventListener('click', () => {
-                    if (currentTokenPage < totalTokenPages - 1) {
-                        currentTokenPage++;
-                        loadLockedTokens();
-                    }
-                });
-            } catch (error) {
-                console.error('Load locked tokens error:', error);
-                status.textContent = "Failed to load locked tokens: " + error.message;
-                lockTableBody.innerHTML = '<tr><td colspan="5">Error loading locked tokens. Check console for details.</td></tr>';
-                updatePagination(0, 0);
-            }
-        }
-
-        async function loadLockInfoForToken(tokenAddress, page) {
-            const lockRadioGroup = document.getElementById('lockId');
-            const lockTableBody = document.getElementById('lockTableBody');
+            const lockRadioGroup = document.getElementById('lockedTokenAddress');
+            const lockIdGroup = document.getElementById('lockId');
             const status = document.getElementById('lockInfoStatus');
             const unlockButton = document.getElementById('unlockToken');
-            const prevPageBtn = document.getElementById('prevPage');
-            const nextPageBtn = document.getElementById('nextPage');
-            const pageInfo = document.getElementById('pageInfo');
 
-            lockRadioGroup.innerHTML = '';
-            lockTableBody.innerHTML = '';
-            unlockButton.disabled = true;
-
-            if (!tokenAddress || !accounts) {
-                status.textContent = "Please select a token address.";
+            if (!web3.utils.isAddress(tokenAddress)) {
+                status.textContent = "Enter a valid token address.";
                 return;
             }
 
             try {
-                const [locks, totalLocks] = await lockerContract.methods.getLockInfo(accounts[0], tokenAddress, page, locksPerPage).call();
-                console.log(`Locks loaded for ${tokenAddress} - Page: ${page}, Data:`, locks, 'Total:', totalLocks);
-                const totalLockPages = Math.ceil(totalLocks / locksPerPage);
+                lockTableBody.innerHTML = '';
+                lockRadioGroup.innerHTML = '';
+                lockIdGroup.innerHTML = '';
+                unlockButton.disabled = true;
+
+                const [locks, totalLocks] = await lockerContract.methods.getLockInfo(accounts[0], tokenAddress, 0, 1000).call();
+                console.log('Locks loaded:', locks, 'Total:', totalLocks);
 
                 if (totalLocks === 0) {
                     lockTableBody.innerHTML = '<tr><td colspan="5">No locks found for this token.</td></tr>';
-                    lockRadioGroup.innerHTML = '<p>No locks available.</p>';
-                    status.textContent = "No locks found for selected token.";
-                    updatePagination(page, totalLockPages);
+                    status.textContent = "No locks found for the specified token.";
                     return;
                 }
 
-                for (let i = page * locksPerPage; i < Math.min((page + 1) * locksPerPage, totalLocks); i++) {
-                    const lock = locks[i % locksPerPage];
-                    if (lock.amount > 0) {
+                for (let i = 0; i < totalLocks; i++) {
+                    const lock = locks[i];
+                    if (lock && lock.amount > 0) {
                         const unlockTime = new Date(lock.unlockTime * 1000).toLocaleString();
                         const isUnlocked = lock.unlockTime <= Math.floor(Date.now() / 1000);
                         const row = document.createElement('tr');
@@ -771,55 +693,36 @@
                         `;
                         lockTableBody.appendChild(row);
 
-                        const radio = document.createElement('input');
-                        radio.type = 'radio';
-                        radio.name = 'lockId';
-                        radio.value = i;
-                        radio.id = `lock-${i}`;
-                        radio.addEventListener('change', () => unlockButton.disabled = false);
-                        const label = document.createElement('label');
-                        label.htmlFor = `lock-${i}`;
-                        label.textContent = `Lock ID ${i} - ${web3.utils.fromWei(lock.amount, 'ether')} tokens, Unlock at ${unlockTime}`;
-                        lockRadioGroup.appendChild(radio);
-                        lockRadioGroup.appendChild(label);
+                        const tokenRadio = document.createElement('input');
+                        tokenRadio.type = 'radio';
+                        tokenRadio.name = 'tokenAddress';
+                        tokenRadio.value = tokenAddress;
+                        tokenRadio.id = `token-${tokenAddress}`;
+                        const tokenLabel = document.createElement('label');
+                        tokenLabel.htmlFor = `token-${tokenAddress}`;
+                        tokenLabel.textContent = tokenAddress.slice(0, 6) + '...' + tokenAddress.slice(-4);
+                        lockRadioGroup.appendChild(tokenRadio);
+                        lockRadioGroup.appendChild(tokenLabel);
+
+                        const lockRadio = document.createElement('input');
+                        lockRadio.type = 'radio';
+                        lockRadio.name = 'lockId';
+                        lockRadio.value = i;
+                        lockRadio.id = `lock-${i}`;
+                        lockRadio.addEventListener('change', () => unlockButton.disabled = false);
+                        const lockLabel = document.createElement('label');
+                        lockLabel.htmlFor = `lock-${i}`;
+                        lockLabel.textContent = `Lock ID ${i} - ${web3.utils.fromWei(lock.amount, 'ether')} tokens`;
+                        lockIdGroup.appendChild(lockRadio);
+                        lockIdGroup.appendChild(lockLabel);
                     }
                 }
 
-                status.textContent = "Lock IDs loaded successfully.";
-                updatePagination(page, totalLockPages, tokenAddress);
+                status.textContent = "Locked tokens loaded successfully.";
             } catch (error) {
-                console.error('Load lock info error:', error);
-                status.textContent = "Failed to load lock info: " + error.message;
-                lockTableBody.innerHTML = '<tr><td colspan="5">Error loading locks.</td></tr>';
-                lockRadioGroup.innerHTML = '<p>Error loading lock IDs.</p>';
-                updatePagination(page, 0, tokenAddress);
-            }
-        }
-
-        function updatePagination(page, totalPages, tokenAddress = null) {
-            const prevPageBtn = document.getElementById('prevPage');
-            const nextPageBtn = document.getElementById('nextPage');
-            const pageInfo = document.getElementById('pageInfo');
-
-            prevPageBtn.disabled = page <= 0;
-            nextPageBtn.disabled = page >= totalPages - 1;
-            pageInfo.textContent = `Page ${page + 1} of ${totalPages || 1}`;
-
-            if (tokenAddress) {
-                prevPageBtn.removeEventListener('click', prevPageHandler);
-                nextPageBtn.removeEventListener('click', nextPageHandler);
-                const prevPageHandler = () => {
-                    if (page > 0) {
-                        loadLockInfoForToken(tokenAddress, page - 1);
-                    }
-                };
-                const nextPageHandler = () => {
-                    if (page < totalPages - 1) {
-                        loadLockInfoForToken(tokenAddress, page + 1);
-                    }
-                };
-                prevPageBtn.addEventListener('click', prevPageHandler);
-                nextPageBtn.addEventListener('click', nextPageHandler);
+                console.error('Load locked tokens error:', error);
+                status.textContent = "Failed to load locked tokens: " + error.message;
+                lockTableBody.innerHTML = '<tr><td colspan="5">Error loading locked tokens. Check console for details.</td></tr>';
             }
         }
 
@@ -850,6 +753,7 @@
             document.getElementById('connectWallet').addEventListener('click', connectWallet);
             document.getElementById('lockToken').addEventListener('click', lockToken);
             document.getElementById('unlockToken').addEventListener('click', unlockToken);
+            document.getElementById('loadLocksButton').addEventListener('click', loadLockedTokens);
             document.getElementById('copyAddressButton').addEventListener('click', copyToClipboard);
             document.getElementById('tokenAddress').addEventListener('input', checkAllowanceAndBalance);
             document.getElementById('lockAmount').addEventListener('input', checkAllowanceAndBalance);
