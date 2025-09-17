@@ -95,7 +95,7 @@
             color: #BBBBBB;
             margin-bottom: 5px;
         }
-        input, select {
+        input {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
@@ -105,10 +105,10 @@
             color: #E6E6E6;
             font-size: 0.9rem;
         }
-        input::placeholder, select::placeholder {
+        input::placeholder {
             color: #666666;
         }
-        input:focus, select:focus {
+        input:focus {
             outline: none;
             box-shadow: 0 0 10px rgba(0, 255, 200, 0.4);
         }
@@ -219,7 +219,7 @@
             .button { width: 100%; padding: 12px; margin: 8px 0; font-size: 0.8rem; }
             .section, .how-it-works { padding: 15px; }
             h2 { font-size: 1.1rem; }
-            input, select { font-size: 0.8rem; padding: 8px; }
+            input { font-size: 0.8rem; padding: 8px; }
             .status, .output-box, .how-it-works li, .lock-table th, .lock-table td, .radio-group label { font-size: 0.75rem; }
             .how-it-works ul { padding-left: 15px; }
             .footer { font-size: 0.75rem; }
@@ -250,7 +250,6 @@
                 </div>
                 <input type="number" id="lockAmount" placeholder="Amount to Lock" min="0" step="any">
                 <input type="number" id="lockDays" placeholder="Lock Duration (Days)" min="1" step="1">
-                <button id="approveToken" class="button" disabled>Approve Token</button>
                 <button id="lockToken" class="button" disabled>Lock Token</button>
                 <div class="output-box">
                     <label>Contract Address</label>
@@ -293,8 +292,7 @@
                 <ul>
                     <li><strong>Connect Your Wallet</strong>: Use MetaMask to connect to X Layer (chain ID: 196). Ensure enough <span class="highlight">OKB</span> for gas fees.</li>
                     <li><strong>Check Balance</strong>: Enter a valid ERC20 token address to see your balance.</li>
-                    <li><strong>Approve Tokens</strong>: Approve the contract to manage your tokens if not already approved.</li>
-                    <li><strong>Lock Tokens</strong>: Specify the amount and lock duration (in days), then lock your tokens securely.</li>
+                    <li><strong>Lock Tokens</strong>: Specify the amount and lock duration (in days), then click "Lock Token" to lock. Authorization is handled automatically if needed.</li>
                     <li><strong>Unlock Tokens</strong>: Select a locked token and lock ID to unlock tokens after the lock period expires.</li>
                     <li><strong>View Locks</strong>: Check your locked tokens, amounts, and unlock times in the table below.</li>
                 </ul>
@@ -529,13 +527,11 @@
             const tokenAddress = document.getElementById('tokenAddress').value.trim();
             const amount = document.getElementById('lockAmount').value.trim();
             const lockButton = document.getElementById('lockToken');
-            const approveButton = document.getElementById('approveToken');
             const balanceDisplay = document.getElementById('tokenBalance');
             const status = document.getElementById('lockStatus');
 
             if (!web3.utils.isAddress(tokenAddress)) {
                 lockButton.disabled = true;
-                approveButton.disabled = true;
                 balanceDisplay.textContent = "Enter a valid token address to see balance";
                 return;
             }
@@ -547,57 +543,18 @@
 
                 if (!amount || amount <= 0 || parseFloat(amount) > parseFloat(web3.utils.fromWei(balance, 'ether'))) {
                     lockButton.disabled = true;
-                    approveButton.disabled = true;
                     status.textContent = amount ? "Insufficient balance" : "Enter a valid amount";
                     return;
                 }
 
                 const allowance = await tokenContract.methods.allowance(accounts[0], contractInfo.address).call();
-                const amountWei = web3.utils.toWei(amount, 'ether'); // 假设代币是 18 位小数
+                const amountWei = web3.utils.toWei(amount, 'ether');
                 lockButton.disabled = allowance < amountWei;
-                approveButton.disabled = allowance >= amountWei;
             } catch (error) {
                 console.error(error);
                 status.textContent = "Failed to check allowance or balance: " + error.message;
                 lockButton.disabled = true;
-                approveButton.disabled = true;
                 balanceDisplay.textContent = "Invalid token address";
-            }
-        }
-
-        async function approveToken() {
-            const section = document.getElementById('lockTokenSection');
-            const status = document.getElementById('lockStatus');
-            const tokenAddress = document.getElementById('tokenAddress').value.trim();
-            const amount = document.getElementById('lockAmount').value.trim();
-
-            if (!web3.utils.isAddress(tokenAddress)) {
-                status.textContent = "Invalid token address.";
-                return;
-            }
-            if (!amount || amount <= 0) {
-                status.textContent = "Invalid amount.";
-                return;
-            }
-            if (!accounts) {
-                status.textContent = "Please connect your wallet first!";
-                return;
-            }
-
-            try {
-                section.classList.add('loading');
-                status.textContent = "Approving token...";
-                const tokenContract = new web3.eth.Contract(erc20ABI, tokenAddress);
-                const amountWei = web3.utils.toWei(amount, 'ether'); // 假设代币是 18 位小数
-                const gas = await tokenContract.methods.approve(contractInfo.address, amountWei).estimateGas({ from: accounts[0] }).catch(() => 100000);
-                await tokenContract.methods.approve(contractInfo.address, amountWei).send({ from: accounts[0], gas: Math.floor(gas * 1.2) });
-                status.textContent = "Token approved successfully!";
-                await checkAllowanceAndBalance();
-            } catch (error) {
-                console.error(error);
-                status.textContent = "Failed to approve: " + error.message;
-            } finally {
-                section.classList.remove('loading');
             }
         }
 
@@ -627,10 +584,21 @@
 
             try {
                 section.classList.add('loading');
+                status.textContent = "Checking allowance...";
+                const tokenContract = new web3.eth.Contract(erc20ABI, tokenAddress);
+                const amountWei = web3.utils.toWei(amount, 'ether');
+                const allowance = await tokenContract.methods.allowance(accounts[0], contractInfo.address).call();
+
+                if (allowance < amountWei) {
+                    status.textContent = "Approving token...";
+                    const gasApprove = await tokenContract.methods.approve(contractInfo.address, amountWei).estimateGas({ from: accounts[0] }).catch(() => 100000);
+                    await tokenContract.methods.approve(contractInfo.address, amountWei).send({ from: accounts[0], gas: Math.floor(gasApprove * 1.2) });
+                    status.textContent = "Token approved, locking now...";
+                }
+
                 status.textContent = "Locking token...";
-                const amountWei = web3.utils.toWei(amount, 'ether'); // 假设代币是 18 位小数
-                const gas = await lockerContract.methods.lockToken(tokenAddress, amountWei, days).estimateGas({ from: accounts[0] }).catch(() => 600000);
-                const tx = await lockerContract.methods.lockToken(tokenAddress, amountWei, days).send({ from: accounts[0], gas: Math.floor(gas * 1.2) });
+                const gasLock = await lockerContract.methods.lockToken(tokenAddress, amountWei, days).estimateGas({ from: accounts[0] }).catch(() => 600000);
+                const tx = await lockerContract.methods.lockToken(tokenAddress, amountWei, days).send({ from: accounts[0], gas: Math.floor(gasLock * 1.2) });
                 status.innerHTML = `Tokens locked! Lock ID: ${tx.events.TokenLocked.returnValues.lockId} (<a href="${xLayer.explorerUrl}/tx/${tx.transactionHash}" target="_blank">View on Explorer</a>)`;
                 document.getElementById('tokenAddress').value = '';
                 document.getElementById('lockAmount').value = '';
@@ -690,7 +658,8 @@
                 unlockButton.disabled = true;
 
                 const [tokens, totalTokens] = await lockerContract.methods.getUserLockedTokens(accounts[0], 0, 100).call();
-                if (totalTokens == 0) {
+                console.log('Tokens loaded:', tokens, 'Total:', totalTokens); // 调试信息
+                if (totalTokens === 0) {
                     lockTableBody.innerHTML = '<tr><td colspan="5">No locked tokens found.</td></tr>';
                     tokenRadioGroup.innerHTML = '<p>No tokens available.</p>';
                     status.textContent = "No locked tokens found.";
@@ -706,11 +675,12 @@
                     radio.addEventListener('change', loadLockInfo);
                     const label = document.createElement('label');
                     label.htmlFor = `token-${token}`;
-                    label.textContent = token;
+                    label.textContent = token.slice(0, 6) + '...' + token.slice(-4); // 缩短显示
                     tokenRadioGroup.appendChild(radio);
                     tokenRadioGroup.appendChild(label);
 
                     const [locks, totalLocks] = await lockerContract.methods.getLockInfo(accounts[0], token, 0, 100).call();
+                    console.log(`Locks for ${token}:`, locks, 'Total:', totalLocks); // 调试信息
                     for (let i = 0; i < totalLocks; i++) {
                         const lock = locks[i];
                         if (lock.amount > 0) {
@@ -730,9 +700,9 @@
                 }
                 status.textContent = "Locked tokens loaded successfully.";
             } catch (error) {
-                console.error(error);
+                console.error('Load locked tokens error:', error);
                 status.textContent = "Failed to load locked tokens: " + error.message;
-                lockTableBody.innerHTML = '<tr><td colspan="5">Error loading locked tokens.</td></tr>';
+                lockTableBody.innerHTML = '<tr><td colspan="5">Error loading locked tokens. Check console for details.</td></tr>';
             }
         }
 
@@ -752,7 +722,8 @@
 
             try {
                 const [locks, totalLocks] = await lockerContract.methods.getLockInfo(accounts[0], tokenAddress, 0, 100).call();
-                if (totalLocks == 0) {
+                console.log(`Lock info for ${tokenAddress}:`, locks, 'Total:', totalLocks); // 调试信息
+                if (totalLocks === 0) {
                     lockRadioGroup.innerHTML = '<p>No locks available for this token.</p>';
                     status.textContent = "No locks found for selected token.";
                     return;
@@ -776,7 +747,7 @@
                 }
                 status.textContent = "Lock IDs loaded successfully.";
             } catch (error) {
-                console.error(error);
+                console.error('Load lock info error:', error);
                 status.textContent = "Failed to load lock info: " + error.message;
                 lockRadioGroup.innerHTML = '<p>Error loading lock IDs.</p>';
             }
@@ -807,7 +778,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('copyAddressButton').disabled = false;
             document.getElementById('connectWallet').addEventListener('click', connectWallet);
-            document.getElementById('approveToken').addEventListener('click', approveToken);
             document.getElementById('lockToken').addEventListener('click', lockToken);
             document.getElementById('unlockToken').addEventListener('click', unlockToken);
             document.getElementById('copyAddressButton').addEventListener('click', copyToClipboard);
